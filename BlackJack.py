@@ -47,6 +47,8 @@ class Shoe(object):
 
     def __init__(self, decks):
         self.count = 0
+        self.count2 = 0
+
         self.count_history = []
         self.ideal_count = {}
         self.decks = decks
@@ -64,6 +66,7 @@ class Shoe(object):
         Initialize the shoe with shuffled playing cards and set count to zero.
         """
         self.count = 0
+        self.count2 = 0
         self.count_history.append(self.count)
 
         cards = []
@@ -102,6 +105,7 @@ class Shoe(object):
         Add the dealt card to current count.
         """
         self.count += BASIC_OMEGA_II[card.name]
+        self.count2 += self.truecount()
         self.count_history.append(self.truecount())
 
     def truecount(self):
@@ -460,6 +464,7 @@ if __name__ == "__main__":
     moneys = []
     bets = []
     countings = []
+    #countings = 0
     nb_hands = 0
     for g in range(GAMES):
         game = Game()
@@ -470,8 +475,8 @@ if __name__ == "__main__":
 
         moneys.append(game.get_money())
         bets.append(game.get_bet())
-        countings += game.shoe.count_history
-
+        #countings += game.shoe.count_history
+        countings.append(game.shoe.count2)
         print("WIN for Game no. %d: %s (%s bet)" % (g + 1, "{0:.2f}".format(game.get_money()), "{0:.2f}".format(game.get_bet())))
 
     sume = 0.0
