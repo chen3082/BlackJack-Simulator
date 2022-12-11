@@ -9,10 +9,12 @@ import matplotlib.pyplot as plt
 from importer.StrategyImporter import StrategyImporter
 
 
-GAMES = 20000
-SHOE_SIZE = 6
+GAMES = 100
+SHOE_SIZE = 8 #2,4,6,8
 SHOE_PENETRATION = 0.25
-BET_SPREAD = 20.0
+BET_SPREAD = 20.0 # 
+GAME_PROB = 49.516  #0.263, 0.412, 0.461, 0.484
+
 
 DECK_SIZE = 52.0
 CARDS = {"Ace": 11, "Two": 2, "Three": 3, "Four": 4, "Five": 5, "Six": 6, "Seven": 7, "Eight": 8, "Nine": 9, "Ten": 10, "Jack": 10, "Queen": 10, "King": 10}
@@ -374,13 +376,17 @@ class Game(object):
     """
     A sequence of Blackjack Rounds that keeps track of total money won or lost
     """
-    def __init__(self):
+    def __init__(self,bankroll=0):
         self.shoe = Shoe(SHOE_SIZE)
-        self.money = 0.0
+        self.money = bankroll
         self.bet = 0.0
         self.stake = 1.0
         self.player = Player()
         self.dealer = Dealer()
+        self.status = "init"
+        self.P = 0.0
+        
+        print(bankroll)
 
     def get_hand_winnings(self, hand):
         win = 0.0
@@ -421,14 +427,24 @@ class Game(object):
             bet *= 2
 
         win *= self.stake
-
+        self.status = status
         return win, bet
 
     def play_round(self):
-        if self.shoe.truecount() > 6:
-            self.stake = BET_SPREAD
-        else:
+        # if self.shoe.truecount() > 6:
+        #     self.stake = BET_SPREAD
+        # else:
+        #     self.stake = 1.0
+        # self.P = (self.shoe.truecount() * 0.5 + GAME_PROB)/100
+        self.P = (self.shoe.truecount() * 0.5 + GAME_PROB)/100 - 0.5
+
+        if self.shoe.truecount() <= 0 or self.P <= 0.0:
             self.stake = 1.0
+        else:
+            #P = (self.shoe.truecount() * 0.5 + GAME_PROB)/100
+            #self.P = P
+            # self.stake = self.P * (1-self.P)/1 * self.money
+            self.stake = self.P/1.3225 * self.money
 
         player_hand = Hand([self.shoe.deal(), self.shoe.deal()])
         dealer_hand = Hand([self.shoe.deal()])
@@ -464,20 +480,51 @@ if __name__ == "__main__":
     moneys = []
     bets = []
     countings = []
+    CountPerRoundList = []
+    BetPerRoundList = []
+    MoneyPerRoundList = []
+    
     #countings = 0
     nb_hands = 0
+    #last_bet = 0
+    last_money = 100000
+    #Nround = 1
     for g in range(GAMES):
-        game = Game()
+        last_bet = 0
+        #last_money = 0
+        Nround = 1
+        print('hi',last_money)
+        game = Game(last_money)
         while not game.shoe.reshuffle:
             # print '%s GAME no. %d %s' % (20 * '#', i + 1, 20 * '#')
             game.play_round()
+            #print("count2",game.shoe.truecount())
             nb_hands += 1
+            CountPerRound = game.shoe.truecount() 
+            BetPerRound = game.get_bet()-last_bet
+            MoneyPerRound = game.get_money() 
+            #print("Count: %d Round: %d Money: %s Bet:(%s)" % (game.shoe.truecount(),Nround, "{0:.2f}".format(game.get_money()-last_money), "{0:.2f}".format(game.get_bet()-last_bet)))
+            #print("Status: %s Count: %d Round: %d Money: %s Bet:(%s)" % (game.status ,game.shoe.truecount(),Nround, "{0:.2f}".format(game.get_money()), "{0:.2f}".format(game.get_bet())))
+            print("P: %s Status: %s Count: %d Round: %d Money: %s Bet:(%s)" % ("{0:.5f}".format(game.P), game.status ,game.shoe.truecount(),Nround, "{0:.2f}".format(MoneyPerRound), "{0:.2f}".format(BetPerRound)))
+
+            CountPerRoundList.append(CountPerRound)
+            BetPerRoundList.append(BetPerRound)
+            MoneyPerRoundList.append(MoneyPerRound)
+            
+            last_bet = game.get_bet()
+            last_money = game.get_money()
+            Nround +=1
+            #print("WIN for Round no. %d: %s (%s bet)" % (g + 1, "{0:.2f}".format(game.get_money()-), "{0:.2f}".format(game.get_bet())))
+
+            #print("WIN for Round no. %d: %s (%s bet)" % (g + 1, "{0:.2f}".format(game.get_money()), "{0:.2f}".format(game.get_bet())))
+
 
         moneys.append(game.get_money())
         bets.append(game.get_bet())
-        #countings += game.shoe.count_history
-        countings.append(game.shoe.count2)
-        print("WIN for Game no. %d: %s (%s bet)" % (g + 1, "{0:.2f}".format(game.get_money()), "{0:.2f}".format(game.get_bet())))
+        countings += game.shoe.count_history
+        #print(countings)
+        #countings.append(game.shoe.count2)
+        #print("WIN for Game no. %d: %s (%s bet)" % (g + 1, "{0:.2f}".format(game.get_money()), "{0:.2f}".format(game.get_bet())))
 
     sume = 0.0
     total_bet = 0.0
@@ -494,9 +541,30 @@ if __name__ == "__main__":
     fit = stats.norm.pdf(moneys, np.mean(moneys), np.std(moneys))  # this is a fitting indeed
     pl.plot(moneys, fit, '-o')
     pl.hist(moneys, normed=True)
+    plt.xlabel('SHOE_SIZE = 8 BET_SPREAD = 20')
+
     pl.show()
 
     plt.ylabel('count')
+    plt.xlabel('SHOE_SIZE = 8, BET_SPREAD = 20')
+
     plt.plot(countings, label='x')
     plt.legend()
     plt.show()
+    
+    plt.ylabel('Count')
+    plt.xlabel('Round')
+    plt.plot(CountPerRoundList)
+    plt.show()
+    
+    plt.ylabel('Money')
+    plt.xlabel('Round')
+    plt.plot(MoneyPerRoundList)
+    plt.show()
+
+    # plt.ylabel('Bet')
+    # plt.xlabel('Count')
+    # plt.plot(BetPerRoundList)
+    # plt.show()
+    
+    
